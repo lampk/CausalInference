@@ -1,0 +1,205 @@
+---
+title: "Advanced Confounding Adjustment"
+bibliography: references.bib
+format: 
+  html:
+    fontsize: 0.8em
+    theme: cosmo
+    css: style.css
+    toc: true
+    toc-depth: 5
+    grid:
+      margin-width: 350px
+reference-location: margin
+citation-location: margin
+editor: visual
+execute: 
+  echo: true
+  warning: false
+---
+
+## **HANDS-ON SESSION 1: STRUCTURE OF DATASETS FOR CAUSAL INFERENCE WITH TIME-FIXED TREATMENTS**
+
+### **Objectives**
+
+-   Describe the structure of datasets for end-of-follow-up outcomes
+
+-   Describe the structure of datasets for survival outcomes (person-time data format)
+
+-   Estimate parameters of an outcome regression model
+
+-   Construct risk curves via a pooled logistic regression model
+
+### **Introduction**
+
+Welcome to the first hands-on session of the Advanced Confounding Adjustment course! Throughout this course, we will practice applying g-methods for confounding adjustment for time-fixed and time-varying treatments.
+
+In this session we describe the structure of the dataset for causal inference and some basic causal analyses when there are no confounders. We will first describe the causal question of interest. Next, we will introduce the dataset that will be used to answer this question. Last, we will work through several data analysis exercises to gain familiarity with the data and to practice fitting models for different outcome types. At the end of the session, you will be able to use outcome models when estimating the causal effects of point interventions on different outcome types.
+
+### **Background. The Causal Question and the Data**
+
+To get started, we need to specify the causal question of interest: **what is the effect of quitting smoking (**𝑨𝟎 = 𝟏**) versus not quitting smoking (**𝑨𝟎 = 𝟎**) between 1971 and 1982 on all-cause mortality by 1992 (**𝒀𝑲+𝟏**)?** That is, our goal is to estimate (a) the risk of death had everybody quit smoking and (b) the risk of death had nobody quit smoking. We will then compare these risks via a ratio (the causal risk ratio) or difference (the causal risk difference). In this session we (naively) assume that there is no confounding for the effect of smoking cessation on death and thus only compare the unadjusted risks. In later sessions, we will introduce adjustment for confounders.
+
+For simplicity, we will consider quitting smoking as a point intervention (see Fine Point 12.1 of “Causal Inference: What If” for a disclaimer). We will also consider death first as a dichotomous (end-of follow-up) outcome and then as a failure time outcome in a survival analysis. We will be using data from the NHANES I Epidemiologic Follow-up Study (NHEFS):
+
+::: callout-important
+##### The NHANES I Epidemiologic Follow-up Study (NHEFS) dataset (nhefs)
+
+*The NHANES I Epidemiologic Follow-up Study (NHEFS) is a national longitudinal study that was jointly initiated by the National Center for Health Statistics and the National Institute on Aging in collaboration with other agencies of the Public Health Service. It was designed to examine relationships between clinical, nutritional, and behavioral factors and subsequent health outcomes.*
+
+*Our dataset contains information on the 1,629 cigarette smokers aged 25-74 when interviewed between 1971-1975. Participants were interviewed again in 1982. For simplicity, we have excluded participants with missing data on sex, age, race, weight, height, education, alcohol use, and smoking intensity at either visit, and excluded those who did not complete the general medical history questionnaire at baseline.*
+
+*For more information on the NHEFS, see: https://www.cdc.gov/nchs/data/nhanes/nhefs/1992vital.pdf*
+:::
+
+The following variables from the NHEFS dataset will be relevant for today’s session.
+
+**Data Codebook (Select Variables): NHEFS dataset**
+
+Below is a simplified representation of the dataset for four individuals and a few select variables:
+
+**Table 1.** NHEFS data structure (simplified)
+
+These data can be described as being in “wide” format—that is, each row of data corresponds to an individual. To estimate our causal effect of interest, we assume that the variables are measured for each individual in the following temporal order:
+
+1\. Covariates 𝐿0: an individual’s covariate (e.g., sex, age) level at baseline
+
+2\. Treatment 𝐴0: an individual’s treatment (i.e., quitting smoking) level at baseline
+
+3\. Outcome 𝑌 𝐾+1: an indicator for whether an individual developed the outcome (i.e., death) by the end of follow-up
+
+### **Part I. Effect Estimation for a Dichotomous Outcome**
+
+Suppose these data came from a marginally randomized trial of smoking cessation, in which no confounding is expected. For simplicity, we assume no loss to follow-up and full adherence to the assigned treatment. That is, we assume the following causal structure:
+
+$$
+A_0 \rightarrow Y_{k + 1}
+$$
+
+where:
+
+• $A_0$ represents the treatment, quitting smoking, at baseline
+
+• $Y_{k + 1}$ represents the outcome, death, by the end of follow-up
+
+Because no confounding is expected, the conditional probability of death among those who quit smoking, Pr\[𝑌 𝐾+1 = 1\|𝐴0 = 1\], is an unbiased estimator of the probability of death if everyone had quit smoking in the population, and analogously for Pr\[𝑌 𝐾+1 = 1\|𝐴0 = 0\]. Therefore, the effect of quitting smoking on death is Pr\[𝑌 𝐾+1 = 1\|𝐴0 = 1\] /Pr⁡\[𝑌 𝐾+1 = 1\|𝐴0 = 0\] on the risk ratio scale and Pr\[𝑌 𝐾+1 = 1\|𝐴0 = 1\] − Pr\[𝑌 𝐾+1 = 1\|𝐴0 = 0\]⁡on the risk difference scale. To estimate each of these probabilities nonparametrically, we could simply compute the proportion of deaths in each treatment group. Equivalently, we could use a saturated logistic regression model.
+
+*Note: We will provisionally ignore the precision of these estimates. In future hands-on sessions, we will discuss how to estimate 95% confidence intervals.*
+
+**Data Analysis Exercise 1: Estimating the causal effect via a logistic regression model for a dichotomous outcome using nonparametric estimation**
+
+a\) Compute the probability of the outcome for each treatment group.
+
+b\) Use the probabilities from (a) to estimate the effect on the risk ratio and the risk difference scales.
+
+c\) Fit a saturated logistic model: logit⁡Pr⁡\[𝑌 𝐾+1 = 1\|𝐴0⁡\] = 𝛽0 + 𝛽1⁡𝐴0 and use its parameter estimates to estimate and interpret the risk of death in the treatment and no treatment groups.
+
+d\) Use the probabilities from (c) to estimate the effect on the risk ratio and the risk difference scales.
+
+e\) Provide a causal interpretation of the risk ratio and risk difference.
+
+**Part II. Effect Estimation for a Survival Outcome**
+
+In Part II, we estimated the causal effect of treatment on *whether* death occurs by the end of follow-up. Here we estimate the causal effect of treatment on death during the follow-up. To do so, we conduct a **survival analysis** to estimate the cumulative incidence (risk) curves during the follow-up. We can then compare the risks at any time of follow-up.
+
+The probability of surviving through any particular month of follow-up is the product of the probability of surviving all previous months. Therefore, we can estimate the survival probability in each month 𝑚 (i.e., the hazard in month 𝑚), Pr⁡\[𝑌 𝑚 = 0\|𝑌 𝑚−1 = 0\], by dividing the number of individuals who survive interval 𝑚 by the number of individuals alive at the end of interval 𝑚 − 1, and then multiply these probabilities between month 0 and month *k* to obtain the probability of surviving through month 𝑘, Pr⁡\[𝑌 𝑘 = 0\]. The risk by month 𝑘, Pr\[𝑌 𝑘 = 1\], is 1 − Pr⁡\[𝑌 𝑘 = 0\]. This is known as the Kaplan-Meier estimator of survival. In our simplified example, the risks at the end of follow-up will be the same whether we use Kaplan-Meier or the approach in Part I because, for simplicity, we are not yet considering censoring by loss to follow-up in our analyses.
+
+The nonparametric Kaplan-Meier, however, cannot be used for causal inference when many confounders need to be adjusted for. Therefore, we describe here a model-based alternative that can be more generally used.
+
+**PARAMETRIC ESTIMATORS IN SURVIVAL ANALYSIS**
+
+Here we describe how to estimate the cumulative incidence curves via a **pooled logistic regression model** forthe (discrete-time) hazards Pr⁡\[𝑌 𝑘 = 1\|𝑌 𝑘−1 = 0\]. The hazard at month 𝑘 is the probability of having the outcome in 𝑘 among those who survived through 𝑘 − 1. The model is *pooled* across all time points. This approach will allow us to compute confounding-adjusted risk curves (as we will see in future sessions). Pooled logistic regression models are of the form:
+
+logit⁡Pr⁡\[𝑌 𝑘+1 = 1\|𝐴0, 𝑌 𝑘 = 0\] ⁡= 𝜃0,𝑘 + 𝜃1𝐴0 + 𝜃2,𝑘𝐴0 × 𝑓(𝑘)
+
+where:
+
+-   𝑌 𝑘+*1* is development of the outcome in interval 𝑘 + 1
+
+-   𝐴0 is an indicator for treatment
+
+-   𝜃*0*,𝑘 is a time-varying intercept that allows the hazard to vary over time
+
+-   𝐴0 × 𝑓(𝑘) represents a (vector) of product terms between treatment and functions of time,
+
+which allows for a time-varying hazard ratio (i.e., no proportional hazards assumption is required)
+
+To get started, our NHEFS data must be in the appropriate format to fit a pooled logistic regression model. Specifically, the data must be in **person-time format**, in which time is discretized such that each row of data corresponds to a unit of person-time under follow-up. Here, we will select “person-months” as the unit of person-time. Therefore, each participant may contribute multiple rows of observation, in which the number of rows of observation for each participant corresponds to the number of months under follow-up in the study.
+
+To transform a wide dataset into a person-time dataset, we need to create the following variables:
+
+1\. Time: the number of intervals (e.g., months) 𝑘 since the start of follow-up
+
+2\. Covariates 𝐿𝑘: an individual’s covariate value at the start of interval 𝑘
+
+3\. Treatment 𝐴𝑘: an individual’s treatment value at the end of interval 𝑘
+
+4\. Outcome 𝑌 𝑘+1: an indicator for the outcome in interval 𝑘 + 1
+
+For now, we will only consider time-fixed covariates and treatments that are measured at baseline (i.e., 𝐿𝑘 = 𝐿0 and 𝐴𝑘 = 𝐴0 for all 𝑘).
+
+Let us consider some examples of what the data look like when presented in person-time format. In our first example, the first individual (**seqn** = 233) did not experience the outcome of interest by the end of follow-up. Therefore, the individual is under follow-up for the full duration of the study (10 years, or 120 months) where each month of follow-up (from 𝑘 = 0 to 𝑘 = 119) contributes a unique row of observation:
+
+**Table 2a.** Data in person-time format for individual 233
+
+In our second example, another individual (**seqn** = 245) experienced the event in the second month (modth = 2) of 1985 (yrdth = 85). We define the start of follow-up as January 1983. Therefore, this individual developed the outcome in the 26th month of follow-up (i.e., (yrdth –1983)\*12+ modth = 26). This individual will thus contribute 26 rows of observation.
+
+**Table 2b.** Data in person-time format data for individual 245
+
+We will first perform a few simple steps to **modify the data from wide to person-time format**.
+
+**Data Analysis Exercise 2: Modifying the data from wide to person-time format**
+
+a\) Create a “survtime” variable that corresponds to the duration of follow-up (in months) for each individual:
+
+i\. For individuals who died, this can be calculated from the yrdth and modth variables (i.e., (yrdth – 1983)\*12+ modth).
+
+ii\. For individuals who did not die, you can assume that their duration of follow-up was 120 months.
+
+Expand the dataset by replicating each row based on the value of survtime.
+
+b\) Create a variable, “time”, that represents the interval 𝑘 corresponding to each row. That is, set time equal to 0 for the first row of observation for each individual, set time equal to 1 for the second row, and so forth. Create a “timesq” to represent a squared (or quadratic) term for time.
+
+c\) Create a variable, “event”, where event is equal to 1 if the individual died in interval⁡𝑘 + 1 and their survtime is equal to time, and 0 otherwise.
+
+Now, we are now ready to parametrically estimate the 10-year risk of death under treatment and under no treatment by fitting a non-saturated pooled logistic regression model.
+
+**Data Analysis Exercise 3: Estimating the causal effect for a survival outcome via a pooled logistic regression model**
+
+a\) Fit a pooled logistic regression model to the study data. Include treatment (qsmk) and follow-up time as the only covariates in the model. Model follow-up time as a continuous variable using a linear term. Include a product term between treatment and follow-up time.
+
+i\. Explain in words why this model is “parametric”. Specifically, what modeling assumption(s) did you make?
+
+ii\. Describe how we would parameterize the pooled logistic regression model in order to obtain the same estimates as a Kaplan-Meier approach.
+
+iii\. Explain in words the need for a product term between qsmk and time in the model from above.
+
+b\) Refit the pooled logistic regression model from part (a). However, model follow-up time as a continuous variable using a linear and quadratic term. Include product terms between treatment and all functions of time.
+
+c\) Using the estimates you obtained from the pooled logistic model in part (b), compute the cumulative risk at each month of follow-up for each treatment group.
+
+d\) Using the risks you calculated in part (c), construct parametric risk curves for each treatment group.
+
+e\) Using the risks you calculated in (c), estimate and interpret the risk of death in the treatment and no treatment groups.
+
+f\) Use the risks from (c) to estimate the effect on the risk ratio and the risk difference scales.
+
+g\) Provide a causal interpretation of the risk ratio and risk difference.
+
+h\) How do the estimates from part (e) compare against those from Data Analysis Exercise 2?
+
+i\) *Bonus*: Fit a pooled logistic regression model with treatment (qsmk) and follow-up time as the only covariates in the model. Model follow-up time as a continuous variable using a linear and quadratic term. Do not include any product terms between treatment and follow-up time. Report the exponentiated coefficient for treatment. (ii) Fix a Cox proportional hazards model with treatment (qsmk) as the only covariate in the model. Report the hazard ratio. (iii) How does the exponentiated coefficient from the pooled logistic regression model compare against the hazard ratio from the Cox proportional hazards model?
+
+**APPENDIX**
+
+**Further reading**
+
+1\. Cox, D. R. (1972). Regression models and life‐tables. *Journal of the Royal Statistical Society: Series B (Methodological)*, 34(2), 187-202.
+
+2\. Fisher, L. D., & Lin, D. Y. (1999). Time-dependent covariates in the Cox proportional-hazards regression model. *Annual Review of Public Health*, *20*(1), 145-157.
+
+3\. Hernán, M. A. (2010). The hazards of hazard ratios. *Epidemiology (Cambridge, Mass.)*, 21(1), 13.
+
+4\. “Chapter 3: Regression models for for survival data”. Hosmer, D.W., Lemeshow, S., & May, S. (2008). *Applied Survival Analysis : Regression Modeling of Time-to-Event Data* (2nd ed.). New Jersey, USA: John Wiley & Sons.
+
+*5.* Stensrud, M. J., & Hernán, M. A. (2020). Why test for proportional hazards?. *JAMA*, 323(14), 1401-1402.
